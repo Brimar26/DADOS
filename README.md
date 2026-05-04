@@ -1,101 +1,144 @@
+<div id="matevida-game">
+    <div class="header-game">
+        <span id="score">Puntos: 0</span>
+        <span id="level">Nivel: Suma</span>
+    </div>
 
-<div id="game-container">
-    <h2>🎲 Reto de Dados: MateVida Digital</h2>
-    <div class="dice-wrapper">
-        <div id="dice1" class="dice">1</div>
-        <div id="dice2" class="dice">1</div>
+    <div class="dice-container">
+        <div id="dado1" class="dice">?</div>
+        <div id="dado2" class="dice">?</div>
     </div>
-    
-    <button id="roll-btn" onclick="playGame()">Lanzar Dados</button>
-    
-    <div id="challenge-box" class="hidden">
-        <p id="challenge-text"></p>
-        <input type="number" id="user-answer" placeholder="Tu respuesta...">
-        <button onclick="checkAnswer()">Verificar</button>
+
+    <div id="challenge-area">
+        <p id="instruction">¡Haz clic en Lanzar para empezar!</p>
+        <div class="input-group">
+            <input type="number" id="answer" placeholder="?">
+            <button onclick="checkResult()" id="btn-check" disabled>Validar</button>
+        </div>
     </div>
+
+    <button onclick="startTurn()" id="btn-roll">Lanzar Dados 🎲</button>
+    <button onclick="resetGame()" id="btn-reset" class="hidden">Jugar de Nuevo 🔄</button>
     
-    <p id="feedback"></p>
+    <p id="msg"></p>
 </div>
 
-<!-- Estilos Visuales (Vibrantes) -->
 <style>
-    #game-container {
+    #matevida-game {
         background: #ffffff;
-        border: 4px solid #ffd700; /* Dorado MateVida */
-        border-radius: 15px;
-        padding: 20px;
+        border: 4px solid #ffd700;
+        border-radius: 20px;
+        padding: 25px;
+        max-width: 450px;
+        margin: 20px auto;
         text-align: center;
-        max-width: 400px;
-        margin: auto;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Arial', sans-serif;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
-    .dice-wrapper {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        margin: 20px 0;
-    }
+    .header-game { display: flex; justify-content: space-between; font-weight: bold; color: #2c3e50; margin-bottom: 15px; }
+    .dice-container { display: flex; justify-content: center; gap: 15px; margin: 20px 0; }
     .dice {
-        width: 60px;
-        height: 60px;
-        background: #2196F3;
-        color: white;
-        font-size: 30px;
-        line-height: 60px;
-        border-radius: 10px;
-        font-weight: bold;
-        box-shadow: 0 4px #1565C0;
+        width: 70px; height: 70px; background: #2196F3; color: white;
+        font-size: 35px; line-height: 70px; border-radius: 12px;
+        box-shadow: 0 5px #1565C0; transition: transform 0.2s;
     }
-    #roll-btn {
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 18px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: 0.3s;
+    .input-group { margin: 15px 0; }
+    input { padding: 10px; width: 80px; font-size: 20px; border-radius: 8px; border: 2px solid #ccc; text-align: center; }
+    button {
+        padding: 12px 25px; font-size: 16px; border: none; border-radius: 8px;
+        cursor: pointer; font-weight: bold; transition: 0.2s; margin: 5px;
     }
-    #roll-btn:hover { background: #45a049; }
-    #challenge-box { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; }
+    #btn-roll { background: #4CAF50; color: white; }
+    #btn-check { background: #ffd700; color: #333; }
+    #btn-reset { background: #e74c3c; color: white; }
     .hidden { display: none; }
-    #feedback { font-weight: bold; margin-top: 10px; }
+    #msg { height: 25px; font-weight: bold; margin-top: 15px; }
 </style>
 
-<!-- Lógica del Juego (Nivel Intermedio) -->
 <script>
-    let val1, val2, correctAnswer;
+    let score = 0;
+    let currentOp = 0; // 0: Suma, 1: Resta, 2: Multi, 3: Div
+    let ops = ['+', '-', 'x', '÷'];
+    let names = ['Suma', 'Resta', 'Multiplicación', 'División'];
+    let n1, n2, result;
 
-    function playGame() {
-        // Generar números aleatorios del 1 al 6
-        val1 = Math.floor(Math.random() * 6) + 1;
-        val2 = Math.floor(Math.random() * 6) + 1;
-        
-        // Actualizar visualmente los dados
-        document.getElementById('dice1').innerText = val1;
-        document.getElementById('dice2').innerText = val2;
-        
-        // Crear reto: Sumar y multiplicar por 5 (Nivel 4to/5to grado)
-        correctAnswer = (val1 + val2) * 5;
-        
-        document.getElementById('challenge-text').innerHTML = 
-            `<strong>Reto de Lógica:</strong><br>Suma los dados y multiplica el resultado por 5.`;
-        
-        document.getElementById('challenge-box').classList.remove('hidden');
-        document.getElementById('feedback').innerText = "";
-        document.getElementById('user-answer').value = "";
+    function speak(text) {
+        const speech = new SpeechSynthesisUtterance(text);
+        speech.lang = 'es-ES';
+        window.speechSynthesis.speak(speech);
     }
 
-    function checkAnswer() {
-        const userAns = parseInt(document.getElementById('user-answer').value);
-        const feedback = document.getElementById('feedback');
+    function startTurn() {
+        document.getElementById('msg').innerText = "";
+        n1 = Math.floor(Math.random() * 10) + 1;
+        n2 = Math.floor(Math.random() * 10) + 1;
+
+        // Ajuste para resta (no negativos) y división (exacta)
+        if(currentOp === 1 && n1 < n2) [n1, n2] = [n2, n1];
+        if(currentOp === 3) { n1 = n1 * n2; } // Asegura división exacta
+
+        document.getElementById('dado1').innerText = n1;
+        document.getElementById('dado2').innerText = n2;
         
-        if (userAns === correctAnswer) {
-            feedback.innerText = "¡Correcto! +200 Saberes Ganados 🌟";
-            feedback.style.color = "green";
-        } else {
-            feedback.innerText = "Casi... ¡Intenta de nuevo! 🤔";
-            feedback.style.color = "red";
+        document.getElementById('instruction').innerText = `¿Cuánto es ${n1} ${ops[currentOp]} ${n2}?`;
+        document.getElementById('btn-check').disabled = false;
+        document.getElementById('answer').focus();
+        speak(`¿Cuánto es ${n1} ${names[currentOp]} ${n2}?`);
+    }
+
+    function checkResult() {
+        let userAns = parseInt(document.getElementById('answer').value);
+        
+        switch(currentOp) {
+            case 0: result = n1 + n2; break;
+            case 1: result = n1 - n2; break;
+            case 2: result = n1 * n2; break;
+            case 3: result = n1 / n2; break;
         }
+
+        if(userAns === result) {
+            score += 100;
+            document.getElementById('msg').style.color = "green";
+            document.getElementById('msg').innerText = "¡Excelente! +100 puntos";
+            speak("¡Correcto! Muy bien hecho.");
+            nextLevel();
+        } else {
+            document.getElementById('msg').style.color = "red";
+            document.getElementById('msg').innerText = "Inténtalo de nuevo";
+            speak("Oh no, intenta otra vez.");
+        }
+        document.getElementById('score').innerText = `Puntos: ${score}`;
+        document.getElementById('answer').value = "";
+    }
+
+    function nextLevel() {
+        currentOp++;
+        if(currentOp > 3) {
+            endGame();
+        } else {
+            document.getElementById('level').innerText = `Nivel: ${names[currentOp]}`;
+        }
+    }
+
+    function endGame() {
+        document.getElementById('instruction').innerHTML = "<h3>¡FELICIDADES MAESTRO!</h3>";
+        document.getElementById('btn-roll').classList.add('hidden');
+        document.getElementById('btn-check').classList.add('hidden');
+        document.getElementById('btn-reset').classList.remove('hidden');
+        speak(`¡Felicidades! Terminaste el juego con ${score} puntos.`);
+    }
+
+    function resetGame() {
+        score = 0;
+        currentOp = 0;
+        document.getElementById('score').innerText = "Puntos: 0";
+        document.getElementById('level').innerText = "Nivel: Suma";
+        document.getElementById('btn-roll').classList.remove('hidden');
+        document.getElementById('btn-check').classList.remove('hidden');
+        document.getElementById('btn-reset').classList.add('hidden');
+        document.getElementById('instruction').innerText = "¡Haz clic en Lanzar para empezar!";
+        document.getElementById('dado1').innerText = "?";
+        document.getElementById('dado2').innerText = "?";
+        document.getElementById('msg').innerText = "";
     }
 </script>
